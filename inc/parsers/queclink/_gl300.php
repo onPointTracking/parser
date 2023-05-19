@@ -16,6 +16,7 @@ function parse_gl300($data) {
         $uri = NULL;
     }
     file_get_contents('https://s1.recoverylocate.com/insert.php' . $uri);
+    // file_get_contents('https://s3.recoverylocate.com/insert.php' . $uri);
     file_get_contents('https://d1.recoverylocate.com/insert.php' . $uri);
 }
 
@@ -92,22 +93,12 @@ function parse_gl300_fri($params) {
 }
 
 function parse_gl300_inf($params) {
-    include 'inc/db_inc.php';
     $imei = $params[2];
-
-    $stmt = $mysqli->prepare('SELECT * FROM gpsdata_traccar.devices WHERE uniqueId = ?');
-    $stmt->bind_param('s', $imei);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $device = $result->fetch_assoc();
-    $stmt->close();
-
-    $speed = $device['speed'];
-    $heading = $device['course'];
-    $altitude = $device['altitude'];
-    $longitude = $device['lastValidLongitude'];
-    $latitude = $device['lastValidLatitude'];
-
+    $speed = 0.0;
+    $heading = 0;
+    $altitude = 0.0;
+    $longitude = 0.000000;
+    $latitude = 0.000000;
     $fixTime = strtotime($params[23]) * 1000;
     $attributes = array(
         'type' => substr(explode(':', $params[0])[1], 2),
@@ -120,43 +111,26 @@ function parse_gl300_inf($params) {
         'temp1' => number_format($params[20], 1),
         'tail' => substr(end($params), 0, 4)
     );
-    if ($device) {
-        $uri = '?uniqueId=' . $imei . '&altitude=' . $altitude . '&protocol=gl200&course=' . $heading . '&longitude=' . $longitude . '&latitude=' . $latitude . '&speed=' . $speed . '&fixTime=' . $fixTime . '&attributes=' . json_encode($attributes);
-    } else {
-        $uri = NULL;
-    }
+    $uri = '?uniqueId=' . $imei . '&altitude=' . $altitude . '&protocol=gl200&course=' . $heading . '&longitude=' . $longitude . '&latitude=' . $latitude . '&speed=' . $speed . '&fixTime=' . $fixTime . '&valid=false&attributes=' . json_encode($attributes);
+
     return $uri;
 }
 
 function parse_gl300_pfa($params) {
-    include 'inc/db_inc.php';
     $imei = $params[2];
     $name = $params[3];
+    $speed = 0.0;
+    $heading = 0;
+    $altitude = 0.0;
+    $longitude = 0.000000;
+    $latitude = 0.000000;
     $fixTime = strtotime($params[4]) * 1000;
-
-
-    $stmt = $mysqli->prepare('SELECT * FROM gpsdata_traccar.devices WHERE uniqueId = ?');
-    $stmt->bind_param('s', $imei);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $device = $result->fetch_assoc();
-    $stmt->close();
-
-    $speed = $device['speed'];
-    $heading = $device['course'];
-    $altitude = $device['altitude'];
-    $longitude = $device['lastValidLongitude'];
-    $latitude = $device['lastValidLatitude'];
-
     $attributes = array(
         'type' => substr(explode(':', $params[0])[1], 2),
         'name' => $name,
         'tail' => substr(end($params), 0, 4)
     );
-    if ($device) {
-        $uri = '?uniqueId=' . $imei . '&altitude=' . $altitude . '&protocol=gl200&course=' . $heading . '&longitude=' . $longitude . '&latitude=' . $latitude . '&speed=' . $speed . '&fixTime=' . $fixTime . '&attributes=' . json_encode($attributes);
-    } else {
-        $uri = NULL;
-    }
+    $uri = '?uniqueId=' . $imei . '&altitude=' . $altitude . '&protocol=gl200&course=' . $heading . '&longitude=' . $longitude . '&latitude=' . $latitude . '&speed=' . $speed . '&fixTime=' . $fixTime . '&valid=false&attributes=' . json_encode($attributes);
+
     return $uri;
 }

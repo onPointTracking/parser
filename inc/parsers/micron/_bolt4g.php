@@ -19,6 +19,7 @@ function parse_bolt4g($data) {
         $uri = NULL;
     }
     file_get_contents('https://s1.recoverylocate.com/insert.php' . $uri);
+    // file_get_contents('https://s3.recoverylocate.com/insert.php' . $uri);
     file_get_contents('https://d1.recoverylocate.com/insert.php' . $uri);
 }
 
@@ -29,7 +30,29 @@ function parse_bolt4g_fri($params) {
     $report_id = $params[4];
     $report_type = $params[5];
     $motion = $params[6];
-    $wms_mode = $params[7];
+    switch ($params[7]) {
+        case '0':
+            $wms_mode = 'Normal';
+            break;
+        case '1':
+            $wms_mode = 'Eco';
+            break;
+        case '2':
+            $wms_mode = 'Park';
+            break;
+        case '3':
+            $wms_mode = 'Pursuit';
+            break;
+        case '4':
+            $wms_mode = 'Flight';
+            break;
+        case '5':
+            $wms_mode = 'Logging';
+            break;
+        default:
+            $wms_mode = $params[7];
+            break;
+    }
     $hdop = $params[9];
     switch ($hdop) {
         case '1':
@@ -60,13 +83,13 @@ function parse_bolt4g_fri($params) {
     $mcc = $params[16];
     $mnc = $params[17];
     switch (true) {
-        case strstr($mnc, '0260'):
+        case strstr($mnc, '260'):
             $network = 'T-Mobile';
             break;
-        case strstr($mnc, '0410'):
+        case strstr($mnc, '410'):
             $network = 'ATT';
             break;
-        case strstr($mnc, '0480');
+        case strstr($mnc, '480');
             $network = 'Verizon';
             break;
         default:
@@ -104,7 +127,30 @@ function parse_bolt4g_nmr($params) {
     if ($type == 'NMR') {
         $type = 'NMR' . $report_type;
     }
-    $wms_mode = $params[6];
+
+    switch ($params[6]) {
+        case '0':
+            $wms_mode = 'Normal';
+            break;
+        case '1':
+            $wms_mode = 'Eco';
+            break;
+        case '2':
+            $wms_mode = 'Park';
+            break;
+        case '3':
+            $wms_mode = 'Pursuit';
+            break;
+        case '4':
+            $wms_mode = 'Flight';
+            break;
+        case '5':
+            $wms_mode = 'Logging';
+            break;
+        default:
+            $wms_mode = $params[7];
+            break;
+    }
     $hdop = $params[8];
     switch ($hdop) {
         case '1':
@@ -135,13 +181,13 @@ function parse_bolt4g_nmr($params) {
     $mcc = $params[15];
     $mnc = $params[16];
     switch (true) {
-        case strstr($mnc, '0260'):
+        case strstr($mnc, '260'):
             $network = 'T-Mobile';
             break;
-        case strstr($mnc, '0410'):
+        case strstr($mnc, '410'):
             $network = 'ATT';
             break;
-        case strstr($mnc, '0480');
+        case strstr($mnc, '480');
             $network = 'Verizon';
             break;
         default:
@@ -152,6 +198,7 @@ function parse_bolt4g_nmr($params) {
     $attributes = array(
         'type' => $type,
         'name' => $name,
+        'move' => $report_id,
         'reportid' => $report_id,
         'reporttype' => $report_type,
         'working_mode' => $wms_mode,
@@ -173,7 +220,29 @@ function parse_bolt4g_dsw($params) {
     $type = substr(explode(':', $params[0])[1], 2);
     $imei = $params[2];
     $name = $params[3];
-    $wms_mode = $params[4];
+    switch ($params[4]) {
+        case '0':
+            $wms_mode = 'Normal';
+            break;
+        case '1':
+            $wms_mode = 'Eco';
+            break;
+        case '2':
+            $wms_mode = 'Park';
+            break;
+        case '3':
+            $wms_mode = 'Pursuit';
+            break;
+        case '4':
+            $wms_mode = 'Flight';
+            break;
+        case '5':
+            $wms_mode = 'Logging';
+            break;
+        default:
+            $wms_mode = $params[7];
+            break;
+    }
     $report_type = $params[5];
     $hdop = $params[10];
     switch ($hdop) {
@@ -205,13 +274,13 @@ function parse_bolt4g_dsw($params) {
     $mcc = $params[17];
     $mnc = $params[18];
     switch (true) {
-        case strstr($mnc, '0260'):
+        case strstr($mnc, '260'):
             $network = 'T-Mobile';
             break;
-        case strstr($mnc, '0410'):
+        case strstr($mnc, '410'):
             $network = 'ATT';
             break;
-        case strstr($mnc, '0480');
+        case strstr($mnc, '480');
             $network = 'Verizon';
             break;
         default:
@@ -219,9 +288,10 @@ function parse_bolt4g_dsw($params) {
     }
     $batterylevel = $params[22];
     $attributes = array(
-        'type' => $type,
+        'type' => $type . $report_type,
         'name' => $name,
         'reporttype' => $report_type,
+        'move' => $report_type,
         'working_mode' => $wms_mode,
         'hdop' => $hdop,
         'gpslevel' => $gps_level,
@@ -237,42 +307,102 @@ function parse_bolt4g_dsw($params) {
 }
 
 function parse_bolt4g_inf($params) {
-    include 'inc/db_inc.php';
     $imei = $params[2];
-
-    $stmt = $mysqli->prepare('SELECT * FROM gpsdata_traccar.devices WHERE uniqueId = ?');
-    $stmt->bind_param('s', $imei);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $device = $result->fetch_assoc();
-    $stmt->close();
-
-    $speed = $device['speed'];
-    $heading = $device['course'];
-    $altitude = $device['altitude'];
-    $longitude = $device['lastValidLongitude'];
-    $latitude = $device['lastValidLatitude'];
-
-    $fixTime = strtotime($params[23]) * 1000;
+    $name = $params[3];
+    switch ($params[4]) {
+        case '0':
+            $wms_mode = 'Normal';
+            break;
+        case '1':
+            $wms_mode = 'Eco';
+            break;
+        case '2':
+            $wms_mode = 'Park';
+            break;
+        case '3':
+            $wms_mode = 'Pursuit';
+            break;
+        case '4':
+            $wms_mode = 'Flight';
+            break;
+        case '5':
+            $wms_mode = 'Logging';
+            break;
+        default:
+            $wms_mode = $params[7];
+            break;
+    }
+    $state = $params[5];
+    if ($state = '42') {
+        $move = '1';
+    } else {
+        $move = '0';
+    }
+    $iccid = $params[6];
+    $rssi = $params[7];
+    $batv = $params[12];
+    $batp = $params[19];
+    $speed = 0.0;
+    $heading = 0;
+    $altitude = 0.0;
+    $longitude = 0.000000;
+    $latitude = 0.000000;
+    $fixTime = strtotime($params[18]) * 1000;
     $attributes = array(
         'type' => substr(explode(':', $params[0])[1], 2),
-        'name' => $params[3],
-        'iccid' => $params[5],
-        'rssi' => $params[6],
-        'charger' => $params[8],
-        'battery' => $params[11],
-        'batterylevel' => $params[18],
-        'temp1' => number_format($params[20], 1),
+        'name' => $name,
+        'reporttype' => $state,
+        'move' => $move,
+        'iccid' => $iccid,
+        'rssi' => $rssi,
+        'battery' => $batv,
+        'batterylevel' => $batp,
+        'working_mode' => $wms_mode,
         'tail' => substr(end($params), 0, 4)
     );
-    if ($device) {
-        $uri = '?uniqueId=' . $imei . '&altitude=' . $altitude . '&protocol=gl200&course=' . $heading . '&longitude=' . $longitude . '&latitude=' . $latitude . '&speed=' . $speed . '&fixTime=' . $fixTime . '&attributes=' . json_encode($attributes);
-    } else {
-        $uri = NULL;
-    }
+    $uri = '?uniqueId=' . $imei . '&altitude=' . $altitude . '&protocol=gl200&course=' . $heading . '&longitude=' . $longitude . '&latitude=' . $latitude . '&speed=' . $speed . '&fixTime=' . $fixTime . '&valid=false&attributes=' . json_encode($attributes);
+
     return $uri;
 }
 
 function parse_bolt4g_pfa($params) {
-    return NULL;
+    $imei = $params[2];
+    switch ($params[4]) {
+        case '0':
+            $wms_mode = 'Normal';
+            break;
+        case '1':
+            $wms_mode = 'Eco';
+            break;
+        case '2':
+            $wms_mode = 'Park';
+            break;
+        case '3':
+            $wms_mode = 'Pursuit';
+            break;
+        case '4':
+            $wms_mode = 'Flight';
+            break;
+        case '5':
+            $wms_mode = 'Logging';
+            break;
+        default:
+            $wms_mode = $params[7];
+            break;
+    }
+    $speed = 0.0;
+    $heading = 0;
+    $altitude = 0.0;
+    $longitude = 0.000000;
+    $latitude = 0.000000;
+    $fixTime = strtotime($params[6]) * 1000;
+    $attributes = array(
+        'type' => substr(explode(':', $params[0])[1], 2),
+        'name' => $params[3],
+        'working_mode' => $wms_mode,
+        'tail' => substr(end($params), 0, 4)
+    );
+    $uri = '?uniqueId=' . $imei . '&altitude=' . $altitude . '&protocol=gl200&course=' . $heading . '&longitude=' . $longitude . '&latitude=' . $latitude . '&speed=' . $speed . '&fixTime=' . $fixTime . '&valid=false&attributes=' . json_encode($attributes);
+
+    return $uri;
 }
